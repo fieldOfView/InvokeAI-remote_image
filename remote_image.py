@@ -1,6 +1,8 @@
 import cv2
 import numpy as np
 import urllib
+import requests
+import os
 
 from PIL import Image
 from invokeai.app.invocations.primitives import (
@@ -13,16 +15,18 @@ from invokeai.app.services.image_records.image_records_common import (
 )
 from invokeai.app.invocations.baseinvocation import (
     BaseInvocation,
+    BaseInvocationOutput,
     InputField,
     InvocationContext,
     invocation,
+    invocation_output,
 )
 
 
 @invocation(
     "LoadRemoteImageInvocation",
     title="Load Remote Image",
-    tags=["image", "load", "remote", "url"],
+    tags=["image", "load", "remote", "get", "url"],
     category="image",
     version="0.1.0",
 )
@@ -65,4 +69,37 @@ class LoadRemoteImageInvocation(BaseInvocation):
             image=ImageField(image_name=image_dto.image_name),
             width=image_dto.width,
             height=image_dto.height,
+        )
+
+
+@invocation_output("none_output")
+class NoneOutput(BaseInvocationOutput):
+    """empty node output"""
+
+@invocation(
+    "PostImageToRemoteInvocation",
+    title="Post Image to Remote Server",
+    tags=["image", "send", "remote", "post", "url"],
+    category="image",
+    version="0.1.0",
+)
+class PostImageToRemoteInvocation(BaseInvocation):
+    """Post an image to a remote URL."""
+
+    # Inputs
+    image: ImageField = InputField(description="The image to 'POST'")
+    endpoint: str = InputField(description="The URL of endpoint to POST the image to")
+
+    def invoke(self, context: InvocationContext) -> NoneOutput:
+        image_path = context.services.images.get_path(self.image.image_name)
+
+        with open(image_path, "rb") as image_file:
+            image_name = os.path.basename(image_path)
+            files = {"image": (image_name, image_file, "multipart/form-data", {"Expires": "0"})}
+            response = requests.post(self.endpoint, files=files)
+
+            if response.status_code not in [200, 201]:
+                f"Failed to post the image to endpoint {self.endpoint} with return code {response.status_code}"
+
+        return NoneOutput(
         )
