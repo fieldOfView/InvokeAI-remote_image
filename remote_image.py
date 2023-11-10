@@ -15,11 +15,9 @@ from invokeai.app.services.image_records.image_records_common import (
 )
 from invokeai.app.invocations.baseinvocation import (
     BaseInvocation,
-    BaseInvocationOutput,
     InputField,
     InvocationContext,
     invocation,
-    invocation_output,
 )
 
 
@@ -72,10 +70,6 @@ class LoadRemoteImageInvocation(BaseInvocation):
         )
 
 
-@invocation_output("none_output")
-class NoneOutput(BaseInvocationOutput):
-    """empty node output"""
-
 @invocation(
     "PostImageToRemoteInvocation",
     title="Post Image to Remote Server",
@@ -90,7 +84,7 @@ class PostImageToRemoteInvocation(BaseInvocation):
     image: ImageField = InputField(description="The image to 'POST'")
     endpoint: str = InputField(description="The URL of endpoint to POST the image to")
 
-    def invoke(self, context: InvocationContext) -> NoneOutput:
+    def invoke(self, context: InvocationContext) -> ImageOutput:
         image_path = context.services.images.get_path(self.image.image_name)
 
         with open(image_path, "rb") as image_file:
@@ -101,5 +95,10 @@ class PostImageToRemoteInvocation(BaseInvocation):
             if response.status_code not in [200, 201]:
                 f"Failed to post the image to endpoint {self.endpoint} with return code {response.status_code}"
 
-        return NoneOutput(
+        image = context.services.images.get_pil_image(self.image.image_name)
+
+        return ImageOutput(
+            image=ImageField(image_name=self.image.image_name),
+            width=image.width,
+            height=image.height,
         )
