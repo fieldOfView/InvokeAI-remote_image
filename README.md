@@ -8,6 +8,3 @@ This is an image provider that loads remote images for hooking up to ControlNets
 # Post Image to Remote Server
 
 This node lets you send an image to a remote server, for further processing, storage, dispay, etc.
-
-
-Originally inspired by https://github.com/helix4u/load_video_frame/

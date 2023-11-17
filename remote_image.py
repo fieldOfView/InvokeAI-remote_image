@@ -89,11 +89,20 @@ class PostImageToRemoteInvocation(BaseInvocation):
 
         with open(image_path, "rb") as image_file:
             image_name = os.path.basename(image_path)
-            files = {"image": (image_name, image_file, "multipart/form-data", {"Expires": "0"})}
+            files = {
+                "image": (
+                    image_name,
+                    image_file,
+                    "multipart/form-data",
+                    {"Expires": "0"},
+                )
+            }
             response = requests.post(self.endpoint, files=files)
 
             if response.status_code not in [200, 201]:
-                f"Failed to post the image to endpoint {self.endpoint} with return code {response.status_code}"
+                raise Exception(
+                    f"Failed to post the image to endpoint {self.endpoint} with return code {response.status_code}"
+                )
 
         image = context.services.images.get_pil_image(self.image.image_name)
 
