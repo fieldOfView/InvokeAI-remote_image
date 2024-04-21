@@ -5,16 +5,10 @@ import requests
 import os
 
 from PIL import Image
-from invokeai.app.invocations.primitives import (
+from invokeai.invocation_api import (
+    BaseInvocation,
     ImageField,
     ImageOutput,
-)
-from invokeai.app.services.image_records.image_records_common import (
-    ImageCategory,
-    ResourceOrigin,
-)
-from invokeai.app.invocations.baseinvocation import (
-    BaseInvocation,
     InputField,
     InvocationContext,
     invocation,
@@ -26,7 +20,7 @@ from invokeai.app.invocations.baseinvocation import (
     title="Load Remote Image",
     tags=["image", "load", "remote", "get", "url"],
     category="image",
-    version="0.1.0",
+    version="1.0.0",
 )
 class LoadRemoteImageInvocation(BaseInvocation):
     """Load an image from a remote URL and provide it as output."""
@@ -54,20 +48,11 @@ class LoadRemoteImageInvocation(BaseInvocation):
             raise Exception(f"Failed to decode image from URL {self.image_url}")
 
         # Create the ImageField object
-        image_dto = context.services.images.create(
+        image_dto = context.images.save(
             image=image,
-            image_origin=ResourceOrigin.INTERNAL,
-            image_category=ImageCategory.GENERAL,
-            node_id=self.id,
-            session_id=context.graph_execution_state_id,
-            is_intermediate=self.is_intermediate,
         )
 
-        return ImageOutput(
-            image=ImageField(image_name=image_dto.image_name),
-            width=image_dto.width,
-            height=image_dto.height,
-        )
+        return ImageOutput.build(image_dto)
 
 
 @invocation(
@@ -85,7 +70,7 @@ class PostImageToRemoteInvocation(BaseInvocation):
     endpoint: str = InputField(description="The URL of endpoint to POST the image to")
 
     def invoke(self, context: InvocationContext) -> ImageOutput:
-        image_path = context.services.images.get_path(self.image.image_name)
+        image_path = context.images.get_path(self.image.image_name)
 
         with open(image_path, "rb") as image_file:
             image_name = os.path.basename(image_path)
@@ -104,10 +89,5 @@ class PostImageToRemoteInvocation(BaseInvocation):
                     f"Failed to post the image to endpoint {self.endpoint} with return code {response.status_code}"
                 )
 
-        image = context.services.images.get_pil_image(self.image.image_name)
-
-        return ImageOutput(
-            image=ImageField(image_name=self.image.image_name),
-            width=image.width,
-            height=image.height,
-        )
+        image_dto = context.images.get_dto(self.image.image_name)
+        return ImageOutput.build(image_dto)
